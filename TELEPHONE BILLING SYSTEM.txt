@@ -1,0 +1,252 @@
+import java.util.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+// Customer class
+class Customer {
+    String name;
+    String phoneNumber;
+    String accountType; 
+    double balance;
+
+    public Customer(String name, String phoneNumber, String accountType) {
+        this.name = name;
+        this.phoneNumber = phoneNumber;
+        this.accountType = accountType;
+        this.balance = 0;
+    }
+}
+
+// CallRecord class
+class CallRecord {
+    String phoneNumber;
+    Date callDate;
+    double duration;
+    double cost;
+
+    public CallRecord(String phoneNumber, Date callDate, double duration, double cost) {
+                                                             
+  this.phoneNumber = phoneNumber;
+
+        this.callDate = callDate;
+        this.duration = duration;
+        this.cost = cost;
+    }
+}
+
+// Bill class
+class Bill {
+    String phoneNumber;
+    Date billDate;
+    double totalCost;
+
+    public Bill(String phoneNumber, Date billDate, double totalCost) {
+        this.phoneNumber = phoneNumber;
+        this.billDate = billDate;
+        this.totalCost = totalCost;
+    }
+}
+
+// Payment class
+class Payment {
+    String phoneNumber;
+    Date paymentDate;
+    double amount;
+
+    public Payment(String phoneNumber, Date paymentDate, double amount) {
+        this.phoneNumber = phoneNumber;
+                                                                  
+this.paymentDate = paymentDate;
+ this.amount = amount;
+    }
+}
+ class TelephoneBillingSystem {
+    Map<String, Customer> customers;
+    Map<String, List<CallRecord>> callRecords;
+    Map<String, List<Bill>> bills;
+    Map<String, List<Payment>> payments;
+    Scanner scanner;
+    SimpleDateFormat dateFormat;
+
+    // Thresholds for fraud detection
+    static final double MAX_CALL_COST = 100.0;  // Any call over $100 is suspicious
+    static final double DAILY_COST_LIMIT = 500.0;  // Total call costs over $500 in a single day is suspicious
+
+    public TelephoneBillingSystem() {
+        customers = new HashMap<>();
+        callRecords = new HashMap<>();
+        bills = new HashMap<>();
+        payments = new HashMap<>();
+        scanner = new Scanner(System.in);
+        dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    }
+
+    // Customer Account Management
+    public void createCustomer() {
+        System.out.print("Enter customer name: ");
+        String name = scanner.nextLine();
+                                                    
+
+        System.out.print("Enter phone number: ");
+        String phoneNumber = scanner.nextLine();
+        System.out.print("Enter account type (prepaid/postpaid): ");
+        String accountType = scanner.nextLine();
+        customers.put(phoneNumber, new Customer(name, phoneNumber, accountType));
+        System.out.println("Customer created successfully.");
+    }
+
+    // Call Data Tracking with Fraud Detection
+    public void addCallRecord() {
+        System.out.print("Enter phone number: ");
+        String phoneNumber = scanner.nextLine();
+        System.out.print("Enter call date (yyyy-MM-dd): ");
+        String callDateStr = scanner.nextLine();
+        Date callDate;
+        try {
+            callDate = dateFormat.parse(callDateStr);
+        } catch (ParseException e) {
+            System.out.println("Invalid date format!");
+            return;
+        }
+        System.out.print("Enter call duration (minutes): ");
+        double duration = scanner.nextDouble();
+        scanner.nextLine(); // Consume the newline character
+        System.out.print("Enter call cost: ");
+        double cost = scanner.nextDouble();
+        scanner.nextLine(); // Consume the newline character
+// Adding the call record
+                                                    
+        List<CallRecord> records = callRecords.getOrDefault(phoneNumber, new ArrayList<>());
+        CallRecord newRecord = new CallRecord(phoneNumber, callDate, duration, cost);
+        records.add(newRecord);
+        callRecords.put(phoneNumber, records);
+        System.out.println("Call record added successfully.");
+
+        // Check for fraud detection
+        checkFraud(newRecord, records);
+    }
+
+    // Fraud detection logic
+    public void checkFraud(CallRecord newRecord, List<CallRecord> records) {
+        // Rule 1: If any single call costs more than MAX_CALL_COST, it's flagged as suspicious
+        if (newRecord.cost > MAX_CALL_COST) {
+            System.out.println("Warning: Suspicious activity detected! Call cost exceeds $" + MAX_CALL_COST);
+        }
+
+        // Rule 2: If total daily cost exceeds DAILY_COST_LIMIT, flag it as suspicious
+        double dailyTotalCost = 0;
+        for (CallRecord record : records) {
+            if (dateFormat.format(record.callDate).equals(dateFormat.format(newRecord.callDate))) {
+                dailyTotalCost += record.cost;
+            }
+        }
+        if (dailyTotalCost > DAILY_COST_LIMIT) {
+                                                               
+  System.out.println("Warning: Suspicious activity detected! Total daily cost exceeds $" + DAILY_COST_LIMIT);
+        }
+    }
+
+    // Automated Bill Generation
+    public void generateBill() {
+        System.out.print("Enter phone number: ");
+        String phoneNumber = scanner.nextLine();
+        double totalCost = 0;
+        List<CallRecord> records = callRecords.getOrDefault(phoneNumber, new ArrayList<>());
+        for (CallRecord record : records) {
+            totalCost += record.cost;
+        }
+        Bill bill = new Bill(phoneNumber, new Date(), totalCost);
+        List<Bill> billList = bills.getOrDefault(phoneNumber, new ArrayList<>());
+        billList.add(bill);
+        bills.put(phoneNumber, billList);
+        System.out.println("Bill generated successfully. Total cost: " + totalCost);
+    }
+
+    // Prepaid Billing and Recharge
+    public void rechargeAccount() {
+        System.out.print("Enter phone number: ");
+        String phoneNumber = scanner.nextLine();
+        System.out.print("Enter recharge amount: ");
+        double amount = scanner.nextDouble();
+        scanner.nextLine(); // Consume the newline character
+
+                                                          
+ Customer customer = customers.get(phoneNumber);
+        if (customer != null && customer.accountType.equals("prepaid")) {
+            customer.balance += amount;
+            System.out.println("Account recharged successfully. New balance: " + customer.balance);
+        } else {
+            System.out.println("Customer not found or account type is not prepaid.");
+        }
+    }
+
+    // Payment Processing
+    public void makePayment() {
+        System.out.print("Enter phone number: ");
+        String phoneNumber = scanner.nextLine();
+        System.out.print("Enter payment date (yyyy-MM-dd): ");
+        String paymentDateStr = scanner.nextLine();
+        Date paymentDate;
+        try {
+            paymentDate = dateFormat.parse(paymentDateStr);
+        } catch (ParseException e) {
+            System.out.println("Invalid date format!");
+            return;
+        }
+        System.out.print("Enter payment amount: ");
+        double amount = scanner.nextDouble();
+        scanner.nextLine(); // Consume the newline character
+
+        List<Payment> paymentList = payments.getOrDefault(phoneNumber, new ArrayList<>());
+        paymentList.add(new Payment(phoneNumber, paymentDate, amount));
+                                                          
+        payments.put(phoneNumber, paymentList);
+        System.out.println("Payment processed successfully.");
+    }
+
+    // Main Menu
+    public void mainMenu() {
+        while (true) {
+            System.out.println("Telephone Billing System");
+            System.out.println("1. Create Customer");
+            System.out.println("2. Add Call Record");
+            System.out.println("3. Generate Bill");
+            System.out.println("4. Recharge Account");
+            System.out.println("5. Make Payment");
+            System.out.println("6. Exit");
+            System.out.print("Enter your choice: ");
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // Consume the newline character
+
+            switch (choice) {
+                case 1:
+                    createCustomer();
+                    break;
+                case 2:
+                    addCallRecord();
+                    break;
+                case 3:
+                    generateBill();
+                    break;
+                case 4:
+                                                                  
+                    rechargeAccount();
+                    break;
+                case 5:
+                    makePayment();
+                    break;
+                case 6:
+                    System.out.println("Exiting...");
+                    return;
+                default:
+                    System.out.println("Invalid choice! Please try again.");
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        TelephoneBillingSystem system = new TelephoneBillingSystem();
+        system.mainMenu();
+    }
+}
